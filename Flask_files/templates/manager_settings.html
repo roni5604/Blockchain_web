@@ -1,0 +1,13 @@
+{% extends "base_manager.html" %}
+
+{% block content %}
+<h1>Manager Settings</h1>
+<h2>All Users</h2>
+<ul class="list-group">
+    {% for user in users %}
+    <li class="list-group-item">
+        <a href="{{ url_for('edit_user', user_id=user._id) }}">{{ user.first_name }} {{ user.last_name }}</a> - {{ user.role }}
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

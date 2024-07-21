@@ -1,0 +1,43 @@
+{% extends "base_user.html" %}
+
+{% block content %}
+<h1>Settings</h1>
+<form action="/user_settings" method="post">
+    <div class="form-group">
+        <label for="first_name">First Name:</label>
+        <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}" required>
+    </div>
+    <div class="form-group">
+        <label for="last_name">Last Name:</label>
+        <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}" required>
+    </div>
+    <div class="form-group">
+        <label for="email">Email:</label>
+        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
+    </div>
+    <div class="form-group">
+        <label for="user_id">ID:</label>
+        <input type="text" class="form-control" id="user_id" name="user_id" value="{{ user.user_id }}" required>
+    </div>
+    <div class="form-group">
+        <label for="phone_number">Phone Number:</label>
+        <input type="text" class="form-control" id="phone_number" name="phone_number" value="{{ user.phone_number }}" required>
+    </div>
+    <div class="form-group">
+        <label for="gender">Gender:</label>
+        <select class="form-control" id="gender" name="gender" required>
+            <option value="Male" {% if user.gender =="Male" %}selected{% endif %}>Male</option>
+            <option value="Female" {% if user.gender =="Female" %}selected{% endif %}>Female</option>
+            <option value="Other" {% if user.gender =="Other" %}selected{% endif %}>Other</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="party">Party:</label>
+        <input type="text" class="form-control" id="party" name="party" value="{{ user.party }}" required>
+    </div>
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+{% endblock %}
