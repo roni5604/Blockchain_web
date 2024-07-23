@@ -106,14 +106,13 @@ def user_home():
             "stage": {"$ne": "Closed"}
         }))
         closed_votes = list(votes_collection.find({
-            "stage": "Closed",
+            "voting_status": "Closed",
             "voted_users": user_id
         }))
 
-        return render_template('user_home.html', first_name=session.get('first_name'), votes=ongoing_votes, voted_votes=voted_votes, closed_votes=closed_votes, user_id=user_id)
+        return render_template('user_home.html', first_name=session.get('first_name'), votes=ongoing_votes,
+                               voted_votes=voted_votes, closed_votes=closed_votes, user_id=user_id)
     return redirect(url_for('login_page'))
-
-
 
 
 @app.route('/manager_home')
@@ -129,18 +128,19 @@ def user_votes():
         if request.method == 'POST':
             search_query = request.form.get('search_query', '').strip().lower()
             search_stage = request.form.get('search_stage', '').strip()
-            query = {}
+            query = {"voting_status": "closed"}
             if search_query:
                 query["title"] = {"$regex": search_query, "$options": "i"}
             if search_stage:
-                query["stage"] = search_stage
+                query["stage"] = {"$regex": search_stage, "$options": "i"}
 
             closed_votes = list(votes_collection.find(query))
         else:
-            closed_votes = list(votes_collection.find({"stage": "Closed"}))
+            closed_votes = list(votes_collection.find({"voting_status": "closed"}))
 
         return render_template('user_votes.html', closed_votes=closed_votes)
     return redirect(url_for('login_page'))
+
 
 @app.route('/manager_votes')
 def manager_votes():
@@ -374,6 +374,7 @@ def vote(vote_id):
         return render_template('vote.html', vote=vote)
     return redirect(url_for('login_page'))
 
+
 @app.route('/close_vote/<vote_id>', methods=['POST'])
 def close_vote(vote_id):
     if 'user' in session and session.get('role') == 'manager':
@@ -393,9 +394,10 @@ def close_vote(vote_id):
 @app.route('/closed_votes')
 def closed_votes():
     if 'user' in session and session.get('role') == 'user':
-        closed_votes = list(votes_collection.find({"stage": "Closed"}))
+        closed_votes = list(votes_collection.find({"voting_status": "closed"}))
         return render_template('closed_votes.html', closed_votes=closed_votes)
     return redirect(url_for('login_page'))
+
 
 @app.route('/vote_results/<vote_id>')
 def vote_results(vote_id):
@@ -405,7 +407,6 @@ def vote_results(vote_id):
         no_votes = vote.get('no', 0)
         return render_template('vote_results.html', vote=vote, yes_votes=yes_votes, no_votes=no_votes)
     return redirect(url_for('login_page'))
-
 
 
 if __name__ == '__main__':

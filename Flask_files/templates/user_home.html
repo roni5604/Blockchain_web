@@ -34,11 +34,13 @@
 
 <h2>Closed Votes</h2>
 <ul class="list-group">
-    {% for vote in closed_votes %}
+    {% for vote in voted_votes %}
+    {% if vote.voting_status == 'closed' %}
     <li class="list-group-item">
         {{ vote.title }} - {{ vote.stage }} - Yes: {{ vote.yes }} - No: {{ vote.no }}
         <a href="{{ url_for('vote_results', vote_id=vote._id) }}" class="btn btn-info btn-sm">View Results</a>
     </li>
+    {% endif %}
     {% endfor %}
 </ul>
 {% endblock %}
