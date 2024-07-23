@@ -138,14 +138,7 @@ def user_votes():
         else:
             closed_votes = list(votes_collection.find({"voting_status": "closed"}))
 
-        return render_template('user_votes.html', closed_votes=closed_votes)
-    return redirect(url_for('login_page'))
-
-
-@app.route('/manager_votes')
-def manager_votes():
-    if 'user' in session and session.get('role') == 'manager':
-        return render_template('manager_votes.html', first_name=session.get('first_name'))
+        return render_template('user_votes.html', closed_votes=closed_votes, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
 
@@ -168,22 +161,34 @@ def user_settings():
             # Validate the updated data
             if not re.match(r"^[a-zA-Z]+$", updated_data['first_name']):
                 error = "Invalid first name."
-                return render_template('user_settings.html', user=user, error=error)
+                return render_template('user_settings.html', user=user, first_name=session.get('first_name'),
+                                       error=error)
             if not re.match(r"^[a-zA-Z]+$", updated_data['last_name']):
                 error = "Invalid last name."
-                return render_template('user_settings.html', user=user, error=error)
+                return render_template('user_settings.html', user=user, first_name=session.get('first_name'),
+                                       error=error)
             if not re.match(r"^\d{10}$", updated_data['phone_number']):
                 error = "Invalid phone number. Must be 10 digits."
-                return render_template('user_settings.html', user=user, error=error)
+                return render_template('user_settings.html', user=user, first_name=session.get('first_name'),
+                                       error=error)
             if not re.match(r"^\d{9}$", updated_data['user_id']):
                 error = "Invalid ID. Must be 9 digits."
-                return render_template('user_settings.html', user=user, error=error)
+                return render_template('user_settings.html', user=user, first_name=session.get('first_name'),
+                                       error=error)
 
             users_collection.update_one({"email": session.get('user')}, {"$set": updated_data})
             return redirect(url_for('user_home'))
 
-        return render_template('user_settings.html', user=user)
+        return render_template('user_settings.html', user=user, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
+
+
+@app.route('/manager_votes')
+def manager_votes():
+    if 'user' in session and session.get('role') == 'manager':
+        return render_template('manager_votes.html', first_name=session.get('first_name'))
+    return redirect(url_for('login_page'))
+
 
 
 @app.route('/manager_settings', methods=['GET'])
@@ -213,22 +218,23 @@ def edit_user(user_id):
             # Validate the updated data
             if not re.match(r"^[a-zA-Z]+$", updated_data['first_name']):
                 error = "Invalid first name."
-                return render_template('edit_user.html', user=user, error=error)
+                return render_template('edit_user.html', user=user, first_name=session.get('first_name'), error=error)
             if not re.match(r"^[a-zA-Z]+$", updated_data['last_name']):
                 error = "Invalid last name."
-                return render_template('edit_user.html', user=user, error=error)
+                return render_template('edit_user.html', user=user, first_name=session.get('first_name'), error=error)
             if not re.match(r"^\d{10}$", updated_data['phone_number']):
                 error = "Invalid phone number. Must be 10 digits."
-                return render_template('edit_user.html', user=user, error=error)
+                return render_template('edit_user.html', user=user, first_name=session.get('first_name'), error=error)
             if not re.match(r"^\d{9}$", updated_data['user_id']):
                 error = "Invalid ID. Must be 9 digits."
-                return render_template('edit_user.html', user=user, error=error)
+                return render_template('edit_user.html', user=user, first_name=session.get('first_name'), error=error)
 
             users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": updated_data})
             return redirect(url_for('manager_settings'))
 
-        return render_template('edit_user.html', user=user)
+        return render_template('edit_user.html', user=user, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
+
 
 
 @app.route('/request_manager')
@@ -300,15 +306,14 @@ def create_vote():
 
             return redirect(url_for('manage_votes'))
 
-        return render_template('create_vote.html')
+        return render_template('create_vote.html', first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
-
 
 @app.route('/manage_votes')
 def manage_votes():
     if 'user' in session and session.get('role') == 'manager':
         votes = list(votes_collection.find())
-        return render_template('manage_votes.html', votes=votes)
+        return render_template('manage_votes.html', votes=votes, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
 
@@ -323,10 +328,9 @@ def edit_vote(vote_id):
                 "stage": request.form['stage']
             }
             votes_collection.update_one({"_id": ObjectId(vote_id)}, {"$set": updated_data})
-            normalize_votes()  # Normalize votes after editing
             return redirect(url_for('manage_votes'))
 
-        return render_template('edit_vote.html', vote=vote)
+        return render_template('edit_vote.html', vote=vote, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
 
@@ -360,7 +364,6 @@ def vote(vote_id):
             if user_id in vote.get('voted_users', []):
                 return redirect(url_for('user_home'))
 
-            # Correct the way the vote is stored
             votes_collection.update_one(
                 {"_id": ObjectId(vote_id)},
                 {
@@ -371,7 +374,7 @@ def vote(vote_id):
             )
             return redirect(url_for('user_home'))
 
-        return render_template('vote.html', vote=vote)
+        return render_template('vote.html', vote=vote, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
 
@@ -401,11 +404,11 @@ def closed_votes():
 
 @app.route('/vote_results/<vote_id>')
 def vote_results(vote_id):
-    if 'user' in session and session.get('role') in ['user', 'manager']:
+    if 'user' in session and session.get('role') == 'user':
         vote = votes_collection.find_one({"_id": ObjectId(vote_id)})
-        yes_votes = vote.get('yes', 0)
-        no_votes = vote.get('no', 0)
-        return render_template('vote_results.html', vote=vote, yes_votes=yes_votes, no_votes=no_votes)
+        yes_votes = vote.get("yes", 0)
+        no_votes = vote.get("no", 0)
+        return render_template('vote_results.html', vote=vote, yes_votes=yes_votes, no_votes=no_votes, first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
 
