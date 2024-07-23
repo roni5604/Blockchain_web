@@ -2,5 +2,39 @@
 
 {% block content %}
 <h1>Welcome, {{ first_name }}!</h1>
-<p>This is the user home page.</p>
+
+<h2>Ongoing Votes</h2>
+<ul class="list-group">
+    {% for vote in votes %}
+    <li class="list-group-item">
+        <a href="{{ url_for('vote', vote_id=vote._id) }}">{{ vote.title }}</a> - {{ vote.stage }}
+    </li>
+    {% endfor %}
+</ul>
+
+<h2>Votes You Have Already Voted For</h2>
+<ul class="list-group">
+    {% for vote in voted_votes %}
+    <li class="list-group-item">
+        {{ vote.title }} - {{ vote.stage }} - Your Vote:
+        {% if vote.votes.get(user_id) == "yes" %}
+            Yes
+        {% elif vote.votes.get(user_id) == "no" %}
+            No
+        {% else %}
+            Not Voted
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+
+<h2>Closed Votes</h2>
+<ul class="list-group">
+    {% for vote in closed_votes %}
+    <li class="list-group-item">
+        {{ vote.title }} - {{ vote.stage }} - Yes: {{ vote.yes }} - No: {{ vote.no }}
+        <a href="{{ url_for('vote_results', vote_id=vote._id) }}" class="btn btn-info btn-sm">View Results</a>
+    </li>
+    {% endfor %}
+</ul>
 {% endblock %}

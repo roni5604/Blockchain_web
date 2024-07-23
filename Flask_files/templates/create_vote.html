@@ -1,0 +1,26 @@
+{% extends "base_manager.html" %}
+
+{% block content %}
+<h1>Create Vote</h1>
+<form action="/create_vote" method="post">
+    <div class="form-group">
+        <label for="title">Vote Title:</label>
+        <input type="text" class="form-control" id="title" name="title" required>
+    </div>
+    <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+    </div>
+    <div class="form-group">
+        <label for="stage">Stage:</label>
+        <select class="form-control" id="stage" name="stage" required>
+            <option value="Proposal Submission">Proposal Submission</option>
+            <option value="Preliminary Reading">Preliminary Reading</option>
+            <option value="Committee Review">Committee Review</option>
+            <option value="First Reading">First Reading</option>
+            <option value="Second and Third Readings">Second and Third Readings</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Vote</button>
+</form>
+{% endblock %}

@@ -3,4 +3,6 @@
 {% block content %}
 <h1>Welcome, {{ first_name }}!</h1>
 <p>This is the manager home page.</p>
+<a href="{{ url_for('create_vote') }}" class="btn btn-primary">Create Vote</a>
+<a href="{{ url_for('manage_votes') }}" class="btn btn-secondary">Manage Votes</a>
 {% endblock %}

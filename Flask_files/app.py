@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from pymongo import MongoClient
 import re
+from bson.objectid import ObjectId
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -10,6 +11,7 @@ client = MongoClient('mongodb+srv://roni5604:Dani1996!@blockchainvote.lbmcrlj.mo
 db = client.get_database('BlockchainVote')
 users_collection = db.users
 votes_collection = db.votes
+
 
 @app.route('/')
 @app.route('/login', methods=['GET', 'POST'])
@@ -21,6 +23,7 @@ def login_page():
         user = users_collection.find_one({"email": email})
         if user and user['password'] == password:
             session['user'] = email
+            session['user_id'] = user['user_id']
             session['role'] = user.get('role', 'user')
             session['first_name'] = user['first_name']
             if session['role'] == 'manager':
@@ -31,6 +34,7 @@ def login_page():
             error = "Invalid email or password."
             return render_template('login.html', error=error)
     return render_template('login.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -80,14 +84,37 @@ def register():
             "role": "user"
         })
 
+        # Store user ID in session
+        session['user_id'] = user_id
+        session['first_name'] = first_name
+        session['role'] = 'user'
+
         return redirect(url_for('login_page'))
     return render_template('register.html')
+
 
 @app.route('/user_home')
 def user_home():
     if 'user' in session and session.get('role') == 'user':
-        return render_template('user_home.html', first_name=session.get('first_name'))
+        user_id = session.get('user_id').strip().lower()
+        ongoing_votes = list(votes_collection.find({
+            "stage": {"$ne": "Closed"},
+            "voted_users": {"$ne": user_id}
+        }))
+        voted_votes = list(votes_collection.find({
+            "voted_users": user_id,
+            "stage": {"$ne": "Closed"}
+        }))
+        closed_votes = list(votes_collection.find({
+            "stage": "Closed",
+            "voted_users": user_id
+        }))
+
+        return render_template('user_home.html', first_name=session.get('first_name'), votes=ongoing_votes, voted_votes=voted_votes, closed_votes=closed_votes, user_id=user_id)
     return redirect(url_for('login_page'))
+
+
+
 
 @app.route('/manager_home')
 def manager_home():
@@ -95,17 +122,20 @@ def manager_home():
         return render_template('manager_home.html', first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
+
 @app.route('/user_votes')
 def user_votes():
     if 'user' in session and session.get('role') == 'user':
         return render_template('user_votes.html', first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
+
 @app.route('/manager_votes')
 def manager_votes():
     if 'user' in session and session.get('role') == 'manager':
         return render_template('manager_votes.html', first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
+
 
 @app.route('/user_settings', methods=['GET', 'POST'])
 def user_settings():
@@ -143,12 +173,14 @@ def user_settings():
         return render_template('user_settings.html', user=user)
     return redirect(url_for('login_page'))
 
-@app.route('/manager_settings', methods=['GET', 'POST'])
+
+@app.route('/manager_settings', methods=['GET'])
 def manager_settings():
     if 'user' in session and session.get('role') == 'manager':
         users = list(users_collection.find())
         return render_template('manager_settings.html', first_name=session.get('first_name'), users=users)
     return redirect(url_for('login_page'))
+
 
 @app.route('/edit_user/<user_id>', methods=['GET', 'POST'])
 def edit_user(user_id):
@@ -186,6 +218,16 @@ def edit_user(user_id):
         return render_template('edit_user.html', user=user)
     return redirect(url_for('login_page'))
 
+
+@app.route('/request_manager')
+def request_manager():
+    if 'user' in session and session.get('role') == 'user':
+        users_collection.update_one({"email": session.get('user')}, {"$set": {"role": "manager"}})
+        session['role'] = 'manager'
+        return redirect(url_for('manager_home'))
+    return redirect(url_for('login_page'))
+
+
 @app.route('/logout')
 def logout():
     session.pop('user', None)
@@ -193,19 +235,166 @@ def logout():
     session.pop('first_name', None)
     return redirect(url_for('login_page'))
 
+
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
+
 
 @app.route('/validate_password', methods=['POST'])
 def validate_password():
     password = request.form['password']
     strength = 'Weak'
-    if len(password) >= 8 and re.search(r"[a-z]", password) and re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and re.search(r"[!@#$%^&*]", password):
+    if len(password) >= 8 and re.search(r"[a-z]", password) and re.search(r"[A-Z]", password) and re.search(r"[0-9]",
+                                                                                                            password) and re.search(
+        r"[!@#$%^&*]", password):
         strength = 'Strong'
     elif len(password) >= 6:
         strength = 'Medium'
     return jsonify({'strength': strength})
+
+
+@app.route('/search_users')
+def search_users():
+    if 'user' in session and session.get('role') == 'manager':
+        query = request.args.get('q', '')
+        users = users_collection.find({
+            "$or": [
+                {"first_name": {"$regex": query, "$options": "i"}},
+                {"last_name": {"$regex": query, "$options": "i"}},
+                {"user_id": {"$regex": query, "$options": "i"}},
+                {"party": {"$regex": query, "$options": "i"}}
+            ]
+        })
+        return jsonify([user for user in users])
+    return jsonify([])
+
+
+@app.route('/create_vote', methods=['GET', 'POST'])
+def create_vote():
+    if 'user' in session and session.get('role') == 'manager':
+        if request.method == 'POST':
+            title = request.form['title']
+            description = request.form['description']
+            stage = request.form['stage']
+
+            votes_collection.insert_one({
+                "title": title,
+                "description": description,
+                "stage": stage,
+                "created_by": session.get('user'),
+                "voted_users": [],
+                "votes": {}
+            })
+
+            return redirect(url_for('manage_votes'))
+
+        return render_template('create_vote.html')
+    return redirect(url_for('login_page'))
+
+
+
+@app.route('/manage_votes')
+def manage_votes():
+    if 'user' in session and session.get('role') == 'manager':
+        votes = list(votes_collection.find())
+        return render_template('manage_votes.html', votes=votes)
+    return redirect(url_for('login_page'))
+
+
+@app.route('/edit_vote/<vote_id>', methods=['GET', 'POST'])
+def edit_vote(vote_id):
+    if 'user' in session and session.get('role') == 'manager':
+        vote = votes_collection.find_one({"_id": ObjectId(vote_id)})
+        if request.method == 'POST':
+            updated_data = {
+                "title": request.form['title'],
+                "description": request.form['description'],
+                "stage": request.form['stage']
+            }
+            votes_collection.update_one({"_id": ObjectId(vote_id)}, {"$set": updated_data})
+            normalize_votes()  # Normalize votes after editing
+            return redirect(url_for('manage_votes'))
+
+        return render_template('edit_vote.html', vote=vote)
+    return redirect(url_for('login_page'))
+
+
+def normalize_votes():
+    votes = votes_collection.find()
+    for vote in votes:
+        if 'votes' in vote:
+            new_votes = {}
+            for key, value in vote['votes'].items():
+                normalized_key = key.strip().lower() + ".com"
+                new_votes[normalized_key] = value
+            votes_collection.update_one({"_id": vote["_id"]}, {"$set": {"votes": new_votes}})
+
+
+@app.route('/delete_vote/<vote_id>', methods=['POST'])
+def delete_vote(vote_id):
+    if 'user' in session and session.get('role') == 'manager':
+        votes_collection.delete_one({"_id": ObjectId(vote_id)})
+        return redirect(url_for('manage_votes'))
+    return redirect(url_for('login_page'))
+
+
+@app.route('/vote/<vote_id>', methods=['GET', 'POST'])
+def vote(vote_id):
+    if 'user' in session and session.get('role') == 'user':
+        user_id = session.get('user_id').strip().lower()
+        vote = votes_collection.find_one({"_id": ObjectId(vote_id)})
+
+        if request.method == 'POST':
+            vote_choice = request.form['vote_choice']
+            if user_id in vote.get('voted_users', []):
+                return redirect(url_for('user_home'))
+
+            # Correct the way the vote is stored
+            votes_collection.update_one(
+                {"_id": ObjectId(vote_id)},
+                {
+                    "$push": {"voted_users": user_id},
+                    "$set": {f"votes.{user_id}": vote_choice},
+                    "$inc": {vote_choice: 1}
+                }
+            )
+            return redirect(url_for('user_home'))
+
+        return render_template('vote.html', vote=vote)
+    return redirect(url_for('login_page'))
+
+@app.route('/close_vote/<vote_id>', methods=['POST'])
+def close_vote(vote_id):
+    if 'user' in session and session.get('role') == 'manager':
+        vote = votes_collection.find_one({"_id": ObjectId(vote_id)})
+        yes_count = sum(1 for v in vote['votes'].values() if v == 'yes')
+        no_count = sum(1 for v in vote['votes'].values() if v == 'no')
+        votes_collection.update_one(
+            {"_id": ObjectId(vote_id)},
+            {"$set": {"stage": "Closed", "yes": yes_count, "no": no_count}}
+        )
+        return redirect(url_for('manage_votes'))
+    return redirect(url_for('login_page'))
+
+
+@app.route('/closed_votes')
+def closed_votes():
+    if 'user' in session and session.get('role') == 'user':
+        closed_votes = list(votes_collection.find({"stage": "Closed"}))
+        return render_template('closed_votes.html', closed_votes=closed_votes)
+    return redirect(url_for('login_page'))
+
+@app.route('/vote_results/<vote_id>')
+def vote_results(vote_id):
+    if 'user' in session and session.get('role') in ['user', 'manager']:
+        vote = votes_collection.find_one({"_id": ObjectId(vote_id)})
+        yes_votes = vote.get('yes', 0)
+        no_votes = vote.get('no', 0)
+        return render_template('vote_results.html', vote=vote, yes_votes=yes_votes, no_votes=no_votes)
+    return redirect(url_for('login_page'))
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

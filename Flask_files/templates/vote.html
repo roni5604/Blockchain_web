@@ -1,0 +1,16 @@
+{% extends "base_user.html" %}
+
+{% block content %}
+<h1>{{ vote.title }}</h1>
+<p>{{ vote.description }}</p>
+<form action="{{ url_for('vote', vote_id=vote._id) }}" method="post">
+    <div class="form-group">
+        <label for="vote_choice">Your Vote:</label>
+        <select class="form-control" id="vote_choice" name="vote_choice" required>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit Vote</button>
+</form>
+{% endblock %}
