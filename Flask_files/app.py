@@ -123,12 +123,24 @@ def manager_home():
     return redirect(url_for('login_page'))
 
 
-@app.route('/user_votes')
+@app.route('/user_votes', methods=['GET', 'POST'])
 def user_votes():
     if 'user' in session and session.get('role') == 'user':
-        return render_template('user_votes.html', first_name=session.get('first_name'))
-    return redirect(url_for('login_page'))
+        if request.method == 'POST':
+            search_query = request.form.get('search_query', '').strip().lower()
+            search_stage = request.form.get('search_stage', '').strip()
+            query = {}
+            if search_query:
+                query["title"] = {"$regex": search_query, "$options": "i"}
+            if search_stage:
+                query["stage"] = search_stage
 
+            closed_votes = list(votes_collection.find(query))
+        else:
+            closed_votes = list(votes_collection.find({"stage": "Closed"}))
+
+        return render_template('user_votes.html', closed_votes=closed_votes)
+    return redirect(url_for('login_page'))
 
 @app.route('/manager_votes')
 def manager_votes():
@@ -282,16 +294,14 @@ def create_vote():
                 "title": title,
                 "description": description,
                 "stage": stage,
-                "created_by": session.get('user'),
-                "voted_users": [],
-                "votes": {}
+                "voting_status": "inprocess",  # New field for voting status
+                "created_by": session.get('user')
             })
 
             return redirect(url_for('manage_votes'))
 
         return render_template('create_vote.html')
     return redirect(url_for('login_page'))
-
 
 
 @app.route('/manage_votes')
@@ -372,7 +382,9 @@ def close_vote(vote_id):
         no_count = sum(1 for v in vote['votes'].values() if v == 'no')
         votes_collection.update_one(
             {"_id": ObjectId(vote_id)},
-            {"$set": {"stage": "Closed", "yes": yes_count, "no": no_count}}
+            {
+                "$set": {"voting_status": "closed", "yes": yes_count, "no": no_count}  # Change voting status to closed
+            }
         )
         return redirect(url_for('manage_votes'))
     return redirect(url_for('login_page'))

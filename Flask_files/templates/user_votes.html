@@ -1,6 +1,24 @@
 {% extends "base_user.html" %}
 
 {% block content %}
-<h1>All Votes</h1>
-<p>List of all votes for the user.</p>
+<h1>Closed Votes</h1>
+
+<!-- Search form -->
+<form method="POST" action="{{ url_for('user_votes') }}">
+    <div class="form-group">
+        <label for="search_query">Search by Vote Title:</label>
+        <input type="text" class="form-control" id="search_query" name="search_query" placeholder="Enter vote title or part of it">
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+<!-- List of closed votes -->
+<ul class="list-group mt-4">
+    {% for vote in closed_votes %}
+    <li class="list-group-item">
+        {{ vote.title }} - {{ vote.stage }} - {{ vote.voting_status }}
+        <a href="{{ url_for('vote_results', vote_id=vote._id) }}" class="btn btn-info btn-sm float-right">View Results</a>
+    </li>
+    {% endfor %}
+</ul>
 {% endblock %}

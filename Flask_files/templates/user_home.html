@@ -6,15 +6,18 @@
 <h2>Ongoing Votes</h2>
 <ul class="list-group">
     {% for vote in votes %}
+    {% if vote.voting_status == 'inprocess' %}
     <li class="list-group-item">
         <a href="{{ url_for('vote', vote_id=vote._id) }}">{{ vote.title }}</a> - {{ vote.stage }}
     </li>
+    {% endif %}
     {% endfor %}
 </ul>
 
 <h2>Votes You Have Already Voted For</h2>
 <ul class="list-group">
     {% for vote in voted_votes %}
+    {% if vote.voting_status == 'inprocess' %}
     <li class="list-group-item">
         {{ vote.title }} - {{ vote.stage }} - Your Vote:
         {% if vote.votes.get(user_id) == "yes" %}
@@ -25,6 +28,7 @@
             Not Voted
         {% endif %}
     </li>
+    {% endif %}
     {% endfor %}
 </ul>
 

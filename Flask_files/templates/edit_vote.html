@@ -19,7 +19,7 @@
             <option value="Committee Review" {% if vote.stage == 'Committee Review' %}selected{% endif %}>Committee Review</option>
             <option value="First Reading" {% if vote.stage =='First Reading' %}selected{% endif %}>First Reading</option>
             <option value="Second and Third Readings" {% if vote.stage == 'Second and Third Readings' %}selected{% endif %}>Second and Third Readings</option>
-            <option value="Closed" {% if vote.stage == 'Closed' %}selected{% endif %}>Closed</option>
+            <option value="Closed" {% if vote.stage =='Closed' %}selected{% endif %}>Closed</option>
         </select>
     </div>
     <button type="submit" class="btn btn-primary">Save Changes</button>
