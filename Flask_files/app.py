@@ -7,7 +7,10 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # MongoDB Atlas connection
-client = MongoClient('mongodb+srv://roni5604:Dani1996!@blockchainvote.lbmcrlj.mongodb.net/')
+client = MongoClient(
+    'mongodb+srv://roniRoyAvia:Gilli2106!@webblockchain.jmrzy.mongodb.net/'
+)
+
 db = client.get_database('BlockchainVote')
 users_collection = db.users
 votes_collection = db.votes
@@ -190,7 +193,6 @@ def manager_votes():
     return redirect(url_for('login_page'))
 
 
-
 @app.route('/manager_settings', methods=['GET'])
 def manager_settings():
     if 'user' in session and session.get('role') == 'manager':
@@ -236,7 +238,6 @@ def edit_user(user_id):
     return redirect(url_for('login_page'))
 
 
-
 @app.route('/request_manager')
 def request_manager():
     if 'user' in session and session.get('role') == 'user':
@@ -262,13 +263,13 @@ def terms():
 @app.route('/validate_password', methods=['POST'])
 def validate_password():
     password = request.form['password']
+    print(f"Received password: {password}")  # Debug print
     strength = 'Weak'
-    if len(password) >= 8 and re.search(r"[a-z]", password) and re.search(r"[A-Z]", password) and re.search(r"[0-9]",
-                                                                                                            password) and re.search(
-        r"[!@#$%^&*]", password):
+    if len(password) >= 8 and re.search(r"[a-z]", password) and re.search(r"[A-Z]", password) and re.search(r"[0-9]", password) and re.search(r"[!@#$%^&*]", password):
         strength = 'Strong'
     elif len(password) >= 6:
         strength = 'Medium'
+    print(f"Password strength calculated: {strength}")  # Debug print
     return jsonify({'strength': strength})
 
 
@@ -308,6 +309,7 @@ def create_vote():
 
         return render_template('create_vote.html', first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
+
 
 @app.route('/manage_votes')
 def manage_votes():
@@ -408,7 +410,8 @@ def vote_results(vote_id):
         vote = votes_collection.find_one({"_id": ObjectId(vote_id)})
         yes_votes = vote.get("yes", 0)
         no_votes = vote.get("no", 0)
-        return render_template('vote_results.html', vote=vote, yes_votes=yes_votes, no_votes=no_votes, first_name=session.get('first_name'))
+        return render_template('vote_results.html', vote=vote, yes_votes=yes_votes, no_votes=no_votes,
+                               first_name=session.get('first_name'))
     return redirect(url_for('login_page'))
 
 
