@@ -7,13 +7,18 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # MongoDB Atlas connection
+
+# Replace with your actual connection string
 client = MongoClient(
-    'mongodb+srv://roniRoyAvia:Gilli2106!@webblockchain.jmrzy.mongodb.net/'
+    'mongodb+srv://roniro5604:Dani1996!@blockweb.eiaml.mongodb.net/?retryWrites=true&w=majority&appName=BlockWeb',
+    tls=True,
+    tlsAllowInvalidCertificates=True  # Use this only in development
 )
 
-db = client.get_database('BlockchainVote')
-users_collection = db.users
-votes_collection = db.votes
+
+db = client.get_database('BlockWeb')  # Replace with your actual database name
+users_collection = db.users  # Adjust as needed
+votes_collection = db.votes  # Adjust as needed
 
 
 @app.route('/')
